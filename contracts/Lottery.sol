@@ -16,6 +16,9 @@ contract Lottery is VRFConsumerBase, Ownable{
     address payable[] players;
     uint public linkFee;
     bytes32 public keyHash;
+    address lastWinner;
+
+    event RequestedRandomness(bytes32 id);
     constructor(address _ethUsdPriceFeed, address _vrfCoordinator, 
         address _link, bytes32 _keyHash) public 
         VRFConsumerBase(
@@ -70,18 +73,19 @@ contract Lottery is VRFConsumerBase, Ownable{
         require(lotteryState == LOTTERY_STATE.CALCULATING_WINNER, 
             "must be in calculating_winner state");
         bytes32 requestId = requestRandomness(keyHash, linkFee);
+        emit RequestedRandomness(requestId);
         return requestId;
     }
     function fulfillRandomness(bytes32 /* requestId */, uint256 randomness) internal override {
         require(randomness >0, "random number not found");
         require(lotteryState == LOTTERY_STATE.CALCULATING_WINNER, 
             "must be in calculating_winner state");
-            
-        uint index = randomness% players.length;
 
         lotteryState = LOTTERY_STATE.CLOSED;
-        players[index].transfer(address(this).balance);
+        uint index = randomness% players.length;
+        lastWinner = players[index];
 
+        players[index].transfer(address(this).balance);
         delete players;
 
     }
