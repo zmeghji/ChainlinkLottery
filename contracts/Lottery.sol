@@ -7,25 +7,32 @@ contract Lottery{
     using SafeMathChainlink for uint256;
     AggregatorV3Interface internal ethUsdPriceFeed;
 
-    uint usdEntryFee;
+    enum LOTTERY_STATE {OPEN, CLOSED, CALCULATING_WINNER}
 
+    LOTTERY_STATE public lotteryState ;
+    uint usdEntryFee;
+    address payable[] players;
     constructor(address _ethUsdPriceFeed) public {
         ethUsdPriceFeed = AggregatorV3Interface(_ethUsdPriceFeed);
         usdEntryFee = 50;
+        lotteryState = LOTTERY_STATE.CLOSED;
     }
 
-    function enter() payable{
+    function enter() payable public {
         require(msg.value >= getEntranceFee());
+        require(lotteryState ==LOTTERY_STATE.OPEN);
+
+        players.push(msg.sender);
     }
 
-    function getEntranceFee public view returns(uint){
+    function getEntranceFee() public view returns(uint){
         uint ethUsdPrice = getLatestEthUsdPrice();
         // uint weiEntryFee = (usdEntryFee* 10**18) / (10**8 *ethUsdPrice);
-        uint weiEntryFee = (usdEntryFee* 10**10) / *ethUsdPrice;
+        uint weiEntryFee = (usdEntryFee* 10**10) / ethUsdPrice;
         return weiEntryFee;
     }
 
-    function getLatestEthUsdPrice public view returns(uint){
+    function getLatestEthUsdPrice() public view returns(uint){
         (
             uint80 roundID,
             int price,
