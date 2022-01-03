@@ -3,8 +3,9 @@ pragma solidity ^0.6.6;
 import "@chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol";
 import "@chainlink/contracts/src/v0.6/vendor/SafeMathChainlink.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@chainlink/contracts/src/v0.6/VRFConsumerBase.sol";
 
-contract Lottery is Ownable{
+contract Lottery is VRFConsumerBase, Ownable{
     using SafeMathChainlink for uint256;
     AggregatorV3Interface internal ethUsdPriceFeed;
 
@@ -13,10 +14,20 @@ contract Lottery is Ownable{
     LOTTERY_STATE public lotteryState ;
     uint usdEntryFee;
     address payable[] players;
-    constructor(address _ethUsdPriceFeed) public {
+    uint public linkFee;
+    bytes32 public keyHash;
+    constructor(address _ethUsdPriceFeed, address _vrfCoordinator, 
+        address _link, bytes32 _keyHash) public 
+        VRFConsumerBase(
+            _vrfCoordinator, // VRF Coordinator
+            _link  // LINK Token
+        )
+    {
         ethUsdPriceFeed = AggregatorV3Interface(_ethUsdPriceFeed);
         usdEntryFee = 50;
         lotteryState = LOTTERY_STATE.CLOSED;
+        linkFee = 10**17; //0.1 LINK;
+        keyHash = _keyHash;
     }
 
     function enter() payable public {
@@ -48,11 +59,21 @@ contract Lottery is Ownable{
         require(lotteryState == LOTTERY_STATE.CLOSED, "Cannot start a lottery which is already open");
         lotteryState = LOTTERY_STATE.OPEN;
     }
-    function stopLottery() public {
+    function endLottery() public onlyOwner{
+        require(lotteryState == LOTTERY_STATE.OPEN, 
+            "Cannot end a lottery which has already ended");
+        lotteryState = LOTTERY_STATE.CALCULATING_WINNER;
+        pickWinner();
+    }
+
+    function pickWinner() private returns(bytes32) {
+        require(lotteryState == LOTTERY_STATE.CALCULATING_WINNER, 
+            "must be in calculating_winner state");
+        bytes32 requestId = requestRandomness(keyHash, linkFee);
+        return requestId;
+    }
+    function fulfillRandomness(bytes32 /* requestId */, uint256 randomness) internal override {
 
     }
 
-    // function pickWinner() public {
-
-    // }
 }
