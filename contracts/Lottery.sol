@@ -16,7 +16,7 @@ contract Lottery is VRFConsumerBase, Ownable{
     address payable[] players;
     uint public linkFee;
     bytes32 public keyHash;
-    address lastWinner;
+    address public lastWinner;
 
     event RequestedRandomness(bytes32 id);
     constructor(address _ethUsdPriceFeed, address _vrfCoordinator, 
@@ -34,7 +34,7 @@ contract Lottery is VRFConsumerBase, Ownable{
     }
 
     function enter() payable public {
-        require(msg.value >= getEntranceFee());
+        require(msg.value >= getEntranceFee(), "not enough eth to enter");
         require(lotteryState ==LOTTERY_STATE.OPEN);
 
         players.push(msg.sender);
@@ -42,8 +42,8 @@ contract Lottery is VRFConsumerBase, Ownable{
 
     function getEntranceFee() public view returns(uint){
         uint ethUsdPrice = getLatestEthUsdPrice();
-        // uint weiEntryFee = (usdEntryFee* 10**18) / (10**8 *ethUsdPrice);
-        uint weiEntryFee = (usdEntryFee* 10**10) / ethUsdPrice;
+        // uint weiEntryFee = (usdEntryFee* 10**18) / ( ethUsdPrice/10**8);
+        uint weiEntryFee = (usdEntryFee* 10**26) / ethUsdPrice;
         return weiEntryFee;
     }
 
