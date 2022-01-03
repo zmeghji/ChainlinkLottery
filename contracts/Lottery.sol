@@ -73,6 +73,16 @@ contract Lottery is VRFConsumerBase, Ownable{
         return requestId;
     }
     function fulfillRandomness(bytes32 /* requestId */, uint256 randomness) internal override {
+        require(randomness >0, "random number not found");
+        require(lotteryState == LOTTERY_STATE.CALCULATING_WINNER, 
+            "must be in calculating_winner state");
+            
+        uint index = randomness% players.length;
+
+        lotteryState = LOTTERY_STATE.CLOSED;
+        players[index].transfer(address(this).balance);
+
+        delete players;
 
     }
 
